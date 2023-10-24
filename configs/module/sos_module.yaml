@@ -1,0 +1,7 @@
+_target_: src.models.sos_module.SOSModule
+
+model:
+  _target_: src.models.components.sos.SOSFlow
+  hidden_size: 64
+  k: 5 
+  r: 1
