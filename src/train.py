@@ -8,7 +8,6 @@ from src.utils.jacobian_utils import jacobian_dynamics
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="train.yaml")
 def main(cfg):
-    print(cfg)
 
     datamodule = hydra.utils.instantiate(cfg.data)
     module = hydra.utils.instantiate(cfg.module)
