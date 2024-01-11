@@ -109,6 +109,7 @@ class MLPDataModule(pl.LightningDataModule):
         super().__init__()
         self.batch_size = batch_size
         self.data_size = data_size
+        self.jac_batch_size = data_size // 10
 
     def prepare_data(self):
         self.data = generate_dataset_mlp(self.data_size)
@@ -119,12 +120,21 @@ class MLPDataModule(pl.LightningDataModule):
             [int(0.8*self.data_size), int(0.1*self.data_size), int(0.1*self.data_size)], 
             generator=torch.Generator().manual_seed(42)
         )
+        '''
+        self.mlp_train = self.data[:int(0.8*self.data_size)]
+        self.mlp_val = self.data[int(0.8*self.data_size):int(0.9*self.data_size)]
+        self.mlp_test = self.data[int(0.9*self.data_size):]
+        '''
 
     def train_dataloader(self):
-        return utils.data.DataLoader(self.mlp_train, batch_size=self.batch_size)
+        out = utils.data.DataLoader(self.mlp_train, batch_size=self.batch_size)
+        return out
 
     def val_dataloader(self):
         return utils.data.DataLoader(self.mlp_val, batch_size=self.batch_size)
 
     def test_dataloader(self):
         return utils.data.DataLoader(self.mlp_test, batch_size=self.batch_size)
+
+    def predict_dataloader(self):
+        return utils.data.DataLoader(self.mlp_train, batch_size=self.jac_batch_size)

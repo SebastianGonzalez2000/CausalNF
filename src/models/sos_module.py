@@ -5,9 +5,10 @@ import numpy as np
 
 # define the LightningModule
 class SOSModule(pl.LightningModule):
-    def __init__(self, model):
+    def __init__(self, model, lr):
         super().__init__()
         self.model = model
+        self.lr = lr
 
     def flow_loss(self, z, logdet, size_average=True):
         """If using Uniform as source distribution
@@ -37,6 +38,7 @@ class SOSModule(pl.LightningModule):
 
         val_loss = self.flow_loss(Z, logdet)
         self.log("val_loss", val_loss)
+        self.log("Learning Rate", self.scheduler.get_last_lr()[0])
 
     def test_step(self, batch, batch_idx):
         # this is the test loop
@@ -47,5 +49,9 @@ class SOSModule(pl.LightningModule):
         self.log("test_loss", test_loss)
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=1e-3)
-        return optimizer
+        optimizer = optim.Adam(self.parameters(), lr=self.lr)
+        #scheduler = optim.lr_scheduler.OneCycleLR(optimizer, max_lr = self.lr, total_steps = self.trainer.max_epochs, pct_start = 0.1)
+        #return [optimizer], [{"scheduler": scheduler, "interval": "epoch"}]
+        self.scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=self.trainer.max_epochs//100, gamma=0.97)
+        #return optimizer
+        return [optimizer], [{"scheduler": self.scheduler, "interval": "epoch"}]
