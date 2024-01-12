@@ -49,27 +49,27 @@ def make_sparse_mlp(sparsity_vec, n_layers, hidden_n = None):
         hidden_n = d * 2
     fc1 = nn.Linear(d,hidden_n, bias = False)
     relu1 = nn.ReLU()
-    fc1.weight.requires_grad = False
-    nn.init.normal_(fc1.weight, 0, 5)
+    nn.init.normal_(fc1.weight, 0, 1)
     sparse_index = torch.where(sparsity_vec == 0)
+    fc1.weight.requires_grad = False
     for idx in sparse_index:
         fc1.weight[:,idx] = torch.tensor(0.0)
     layers = [fc1, relu1]
     print(fc1.weight.data)
     for _ in range(1, n_layers - 1):
-        fc = nn.Linear(hidden_n, hidden_n, bias = False)
-        fc.weight.requires_grad = False
-        nn.init.normal_(fc.weight, 0, 1)
+        fc = nn.Linear(hidden_n, hidden_n)
+        #nn.init.normal_(fc.params, 0, 1)
         relu = nn.ReLU()
         layers.extend([fc, relu])
     ### final layer
-    fc_final = nn.Linear(hidden_n, 1, bias=False)
-    relu_final = nn.ReLU()
-    fc_final.weight.requires_grad = False
-    nn.init.normal_(fc_final.weight, 0, 1)
-    layers.extend([fc_final, relu_final])
+    fc_final = nn.Linear(hidden_n, 1)
+    #nn.init.normal_(fc_final.params, 0, 1)
+    layers.extend([fc_final])
 
     net = nn.Sequential(*layers)
+
+    for param in net.parameters():
+        param.requires_grad = False
 
     return net 
 
@@ -164,4 +164,4 @@ if __name__ == "__main__":
     data_module.prepare_data()
     data_module.setup("train")
     train_loader = data_module.train_dataloader()
-    print(next(iter(train_loader))[0:5])
+    print(next(iter(train_loader))[0:10])
