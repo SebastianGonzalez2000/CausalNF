@@ -5,14 +5,14 @@ from torch.autograd.functional import jacobian
 from src.data.components.dep_matrix import dependency_matrix
 
 def jacobian_dynamics(model, data):
-    num_batches = 0
+    num_batches = len(data)
     d = dependency_matrix.shape[0]
     # TODO: Fix this. How to automatically instantiate this on GPU with lightning
-    J = torch.zeros(d, d)#.cuda(0)
+    J = torch.zeros(d, d).to(model.device)
 
     for batch_idx, batch in enumerate(data):
         # TODO: Fix this. Why is the batch sent to CPU during callback?
-        batch = batch#.cuda(0)
+        batch = batch.to(model.device)
         num_batches += 1
         batchjac = mean_batch_jacobian(model, batch)
         J += batchjac

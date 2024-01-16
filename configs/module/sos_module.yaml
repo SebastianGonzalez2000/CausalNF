@@ -1,9 +1,12 @@
 _target_: src.models.sos_module.SOSModule
-
+  
 model:
   _target_: src.models.components.sos.SOSFlow
-  hidden_size: 128
-  k: 6
+  hidden_size: 32
+  k: 5
   r: 3
+  n_layers: 2
 
-lr: 1e-2
+lr: 1e-3
+
+name: "sos_module"

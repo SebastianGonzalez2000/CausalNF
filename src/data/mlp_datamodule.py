@@ -12,6 +12,7 @@ import os
 sys.path.insert(0, os.path.abspath("../.."))
 
 from src.data.components.dep_matrix import dependency_matrix
+from src.utils.utils import perm_2_mat
 
 def generate_dataset(n):
     layers = []
@@ -55,15 +56,14 @@ def make_sparse_mlp(sparsity_vec, n_layers, hidden_n = None):
     for idx in sparse_index:
         fc1.weight[:,idx] = torch.tensor(0.0)
     layers = [fc1, relu1]
-    print(fc1.weight.data)
     for _ in range(1, n_layers - 1):
         fc = nn.Linear(hidden_n, hidden_n)
-        #nn.init.normal_(fc.params, 0, 1)
+        #nn.init.normal_(fc.weight, 0, 0.1)
         relu = nn.ReLU()
         layers.extend([fc, relu])
     ### final layer
     fc_final = nn.Linear(hidden_n, 1)
-    #nn.init.normal_(fc_final.params, 0, 1)
+    #nn.init.normal_(fc_final.weight, 0, 0.1)
     layers.extend([fc_final])
 
     net = nn.Sequential(*layers)
@@ -74,7 +74,7 @@ def make_sparse_mlp(sparsity_vec, n_layers, hidden_n = None):
     return net 
 
 class sparse_MLP(nn.Module):
-    def __init__(self, sparsity, n_layers):
+    def __init__(self, sparsity, n_layers = 3):
         super().__init__()
         d = sparsity.shape[0]
         self.mlps = [make_sparse_mlp(sparsity[i,:], n_layers) for i in range(d)]
@@ -94,7 +94,7 @@ class sparse_MLP(nn.Module):
 def generate_dataset_mlp(n):
 
     d = dependency_matrix.shape[0]
-    mixing_net = sparse_MLP(torch.tensor(dependency_matrix), 3)
+    mixing_net = sparse_MLP(torch.tensor(dependency_matrix))
 
     # fix parameters
     for p in mixing_net.parameters():
@@ -106,14 +106,15 @@ def generate_dataset_mlp(n):
     x = mixing_net(eps)
     x = (x - torch.mean(x, dim=0)) / (torch.std(x, dim=0))
 
-    return x
+    return x, dependency_matrix.astype("float32")
 
 
 class MLPDataModule(pl.LightningDataModule):
     def __init__(self, 
-                 batch_size: int = 32, 
+                 batch_size: int = 128, 
                  data_size = 30000,
-                 permutation = "identity" ## identity or random
+                 permutation = "identity", ## identity or random,
+                 **kwargs
                  ):
         super().__init__()
         self.batch_size = batch_size
@@ -123,20 +124,18 @@ class MLPDataModule(pl.LightningDataModule):
         self.permutation = permutation
 
     def prepare_data(self):
-        self.data = generate_dataset_mlp(self.data_size) 
-        print(self.data[0])
+        self.data, self.dependency_matrix = generate_dataset_mlp(self.data_size) 
         if self.permutation == "random":
-            self.data = self.data[..., torch.randperm(self.data.shape[-1])]
-        print(self.data[0])
-        print(torch.mean(self.data, dim = 0))
-        print(torch.std(self.data, dim = 0))
-
+            perm = torch.randperm(self.data.shape[-1])
+            P = perm_2_mat(perm)
+            self.data = self.data @ P
+            self.dependency_matrix = torch.t(P) @ self.dependency_matrix @ P
 
     def setup(self, stage: str):
-        self.mlp_train, self.mlp_val, self.mlp_test = utils.data.random_split(
+        self.data_train, self.data_val, self.data_test = utils.data.random_split(
             self.data, 
             [int(0.8*self.data_size), int(0.1*self.data_size), int(0.1*self.data_size)], 
-            generator=torch.Generator().manual_seed(42)
+            generator=torch.Generator().manual_seed(42) ## 42
         )
         '''
         self.mlp_train = self.data[:int(0.8*self.data_size)]
@@ -145,23 +144,23 @@ class MLPDataModule(pl.LightningDataModule):
         '''
 
     def train_dataloader(self):
-        out = utils.data.DataLoader(self.mlp_train, batch_size=self.batch_size)
+        out = utils.data.DataLoader(self.data_train, batch_size=self.batch_size)
         return out
 
     def val_dataloader(self):
-        return utils.data.DataLoader(self.mlp_val, batch_size=self.batch_size)
+        return utils.data.DataLoader(self.data_val, batch_size=self.batch_size)
 
     def test_dataloader(self):
-        return utils.data.DataLoader(self.mlp_test, batch_size=self.batch_size)
+        return utils.data.DataLoader(self.data_test, batch_size=self.batch_size)
 
     def predict_dataloader(self):
-        return utils.data.DataLoader(self.mlp_train, batch_size=self.jac_batch_size)
+        return utils.data.DataLoader(self.data_train, batch_size=self.jac_batch_size)
 
 
 if __name__ == "__main__":
     
     data_module = MLPDataModule(permutation="random")
     data_module.prepare_data()
-    data_module.setup("train")
-    train_loader = data_module.train_dataloader()
-    print(next(iter(train_loader))[0:10])
+    data_module.setup("test")
+    test_loader = data_module.test_dataloader()
+    print(next(iter(test_loader))[0:10])

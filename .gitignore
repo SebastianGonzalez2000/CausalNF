@@ -3,3 +3,6 @@ lightning_logs
 LIGHTNING_HYDRA_DEPS
 outputs
 *__pycache__*
+
+checkpoints/
+outputs/

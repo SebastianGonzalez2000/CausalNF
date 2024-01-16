@@ -37,7 +37,7 @@ class MaskedLinear(nn.Linear):
 
 
 class ConditionerNet(nn.Module):
-    def __init__(self, input_size, hidden_size, k, m, n_layers=1):
+    def __init__(self, input_size, hidden_size, k, m, n_layers=3):
         super().__init__()
         self.k = k
         self.m = m

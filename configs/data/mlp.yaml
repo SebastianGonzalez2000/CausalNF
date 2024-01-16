@@ -1,4 +1,4 @@
 _target_: src.data.mlp_datamodule.MLPDataModule
-
-batch_size: 32
-data_size: 30000
+batch_size: 128
+data_size: 50000
+name: "mlp"
