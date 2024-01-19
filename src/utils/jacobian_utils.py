@@ -14,14 +14,14 @@ def jacobian_dynamics(model, data):
         # TODO: Fix this. Why is the batch sent to CPU during callback?
         batch = batch.to(model.device)
         num_batches += 1
-        batchjac = mean_batch_jacobian(model, batch)
+        batchjac = mean_batch_jacobian(model.get_transform(), batch)  ## lambda x: model.forward(x)[0]
         J += batchjac
 
     J = J / num_batches
     return torch.transpose(torch.transpose(J, 0,1) / torch.max(J, dim=1).values, 0,1)
 
 def mean_batch_jacobian(f, x, threshold = 1e-1):
-    f_sum = lambda x: torch.sum(f.forward(x)[0], axis=0)
+    f_sum = lambda x: torch.sum(f(x), axis=0)
     batchjac = jacobian(f_sum, x).permute(1,0,2)
     batchjac = torch.abs(batchjac).mean(axis = 0)
 

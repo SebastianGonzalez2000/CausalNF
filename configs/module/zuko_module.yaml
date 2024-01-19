@@ -1,0 +1,11 @@
+_target_: src.models.sos_module.CausalNFModule
+  
+model:
+  _target_: zuko.flows.NSF
+  features: 5
+  context: 0
+  transforms: 1
+
+lr: 1e-3
+
+name: "sos_module"
